@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiAdmin } from "@/lib/apiAdmin";
+import { api } from "@/lib/api";
 import { SubidaImagen } from "@/components/admin/SubidaImagen";
 
 const PESTAÑAS = ["Geografía", "Partidos", "Candidatos", "Encuestas"] as const;
@@ -139,6 +140,10 @@ function FormularioGeografia({ token }: { token: string }) {
   const [nombreProv, setNombreProv] = useState("");
   const [ubigeoProv, setUbigeoProv] = useState("");
 
+  // Selector Departamento → Provincia para elegir dónde va el nuevo distrito,
+  // sin tener que copiar y pegar ningún ID a mano.
+  const [departamentoIdDist, setDepartamentoIdDist] = useState("");
+  const [provinciasDist, setProvinciasDist] = useState<any[]>([]);
   const [provinciaId, setProvinciaId] = useState("");
   const [nombreDist, setNombreDist] = useState("");
   const [ubigeoDist, setUbigeoDist] = useState("");
@@ -151,6 +156,12 @@ function FormularioGeografia({ token }: { token: string }) {
     apiAdmin.departamentos(token).then(setDepartamentos).catch(() => {});
   }
   useEffect(cargarDepartamentos, [token]);
+
+  useEffect(() => {
+    if (!departamentoIdDist) return setProvinciasDist([]);
+    api.provincias(departamentoIdDist).then(setProvinciasDist).catch(() => setProvinciasDist([]));
+    setProvinciaId("");
+  }, [departamentoIdDist]);
 
   async function enviar(fn: () => Promise<any>, exito: string) {
     try {
@@ -219,15 +230,28 @@ function FormularioGeografia({ token }: { token: string }) {
 
       <div>
         <h3 className="font-medium text-tinta mb-3">Nuevo distrito</h3>
-        <Campo label="ID de provincia">
-          <input
+        <Campo label="Departamento">
+          <select className={claseInput} value={departamentoIdDist} onChange={(e) => setDepartamentoIdDist(e.target.value)}>
+            <option value="">Selecciona…</option>
+            {departamentos.map((d) => (
+              <option key={d.id} value={d.id}>{d.nombre}</option>
+            ))}
+          </select>
+        </Campo>
+        <Campo label="Provincia">
+          <select
             className={claseInput}
-            placeholder="Pega el id de la provincia"
             value={provinciaId}
             onChange={(e) => setProvinciaId(e.target.value)}
-          />
+            disabled={!departamentoIdDist}
+          >
+            <option value="">Selecciona…</option>
+            {provinciasDist.map((p) => (
+              <option key={p.id} value={p.id}>{p.nombre}</option>
+            ))}
+          </select>
         </Campo>
-        <Campo label="Nombre">
+        <Campo label="Nombre del distrito">
           <input className={claseInput} value={nombreDist} onChange={(e) => setNombreDist(e.target.value)} />
         </Campo>
         <Campo label="Ubigeo (6 dígitos)">
@@ -407,12 +431,38 @@ function FormularioEncuestas({ token }: { token: string }) {
 
   const [titulo, setTitulo] = useState("");
   const [slug, setSlug] = useState("");
+
+  // Selector Departamento → Provincia → Distrito, en vez de pegar un ID a mano.
+  const [departamentos, setDepartamentos] = useState<any[]>([]);
+  const [departamentoId, setDepartamentoId] = useState("");
+  const [provincias, setProvincias] = useState<any[]>([]);
+  const [provinciaId, setProvinciaId] = useState("");
+  const [distritos, setDistritos] = useState<any[]>([]);
   const [distritoId, setDistritoId] = useState("");
+
   const [eleccionId, setEleccionId] = useState("");
   const [fechaCierre, setFechaCierre] = useState("");
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const [mensaje, setMensaje] = useState("");
   const [tipoMsg, setTipoMsg] = useState<"ok" | "error">("ok");
+
+  useEffect(() => {
+    api.departamentos().then(setDepartamentos).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!departamentoId) return setProvincias([]);
+    api.provincias(departamentoId).then(setProvincias).catch(() => setProvincias([]));
+    setProvinciaId("");
+    setDistritos([]);
+    setDistritoId("");
+  }, [departamentoId]);
+
+  useEffect(() => {
+    if (!provinciaId) return setDistritos([]);
+    api.distritos(provinciaId).then(setDistritos).catch(() => setDistritos([]));
+    setDistritoId("");
+  }, [provinciaId]);
 
   function cargar() {
     apiAdmin.encuestas(token).then(setEncuestas).catch(() => {});
@@ -440,6 +490,9 @@ function FormularioEncuestas({ token }: { token: string }) {
       setTitulo("");
       setSlug("");
       setSeleccionados([]);
+      setDepartamentoId("");
+      setProvinciaId("");
+      setDistritoId("");
       cargar();
     } catch (e: any) {
       setTipoMsg("error");
@@ -457,8 +510,56 @@ function FormularioEncuestas({ token }: { token: string }) {
     }
   }
 
+  const [nombreEleccion, setNombreEleccion] = useState("");
+  const [tipoEleccion, setTipoEleccion] = useState("MUNICIPAL_DISTRITAL");
+  const [mensajeEleccion, setMensajeEleccion] = useState("");
+  const [tipoMsgEleccion, setTipoMsgEleccion] = useState<"ok" | "error">("ok");
+
+  async function guardarEleccion() {
+    try {
+      await apiAdmin.crearEleccion(token, { nombre: nombreEleccion, tipo: tipoEleccion });
+      setTipoMsgEleccion("ok");
+      setMensajeEleccion("Elección guardada.");
+      setNombreEleccion("");
+      cargar();
+    } catch (e: any) {
+      setTipoMsgEleccion("error");
+      setMensajeEleccion(e.message);
+    }
+  }
+
   return (
     <div>
+      <div className="max-w-sm mb-10 border border-linea p-4">
+        <h3 className="font-medium text-tinta mb-3">Nueva elección</h3>
+        <p className="text-xs text-pizarra/60 mb-3">
+          Crea esto una sola vez por proceso electoral (ej. &ldquo;Elecciones Regionales y
+          Municipales 2026&rdquo;) — luego todas tus encuestas de esa elección la reutilizan.
+        </p>
+        <Campo label="Nombre">
+          <input
+            className={claseInput}
+            value={nombreEleccion}
+            onChange={(e) => setNombreEleccion(e.target.value)}
+            placeholder="Elecciones Municipales 2026"
+          />
+        </Campo>
+        <Campo label="Tipo">
+          <select className={claseInput} value={tipoEleccion} onChange={(e) => setTipoEleccion(e.target.value)}>
+            <option value="MUNICIPAL_DISTRITAL">Municipal distrital</option>
+            <option value="MUNICIPAL_PROVINCIAL">Municipal provincial</option>
+            <option value="REGIONAL">Regional</option>
+            <option value="CONGRESO">Congreso</option>
+            <option value="PRESIDENCIAL">Presidencial</option>
+            <option value="PARLAMENTO_ANDINO">Parlamento Andino</option>
+          </select>
+        </Campo>
+        <button className={claseBoton} onClick={guardarEleccion} disabled={!nombreEleccion}>
+          Guardar elección
+        </button>
+        <Mensaje texto={mensajeEleccion} tipo={tipoMsgEleccion} />
+      </div>
+
       <div className="max-w-lg mb-10">
         <h3 className="font-medium text-tinta mb-3">Nueva encuesta</h3>
         <Campo label="Título">
@@ -467,8 +568,39 @@ function FormularioEncuestas({ token }: { token: string }) {
         <Campo label="Slug (URL, minúsculas y guiones)">
           <input className={claseInput} value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="miraflores-alcaldia-2026" />
         </Campo>
-        <Campo label="ID de distrito">
-          <input className={claseInput} value={distritoId} onChange={(e) => setDistritoId(e.target.value)} placeholder="Pega el id del distrito" />
+        <Campo label="Departamento">
+          <select className={claseInput} value={departamentoId} onChange={(e) => setDepartamentoId(e.target.value)}>
+            <option value="">Selecciona…</option>
+            {departamentos.map((d) => (
+              <option key={d.id} value={d.id}>{d.nombre}</option>
+            ))}
+          </select>
+        </Campo>
+        <Campo label="Provincia">
+          <select
+            className={claseInput}
+            value={provinciaId}
+            onChange={(e) => setProvinciaId(e.target.value)}
+            disabled={!departamentoId}
+          >
+            <option value="">Selecciona…</option>
+            {provincias.map((p) => (
+              <option key={p.id} value={p.id}>{p.nombre}</option>
+            ))}
+          </select>
+        </Campo>
+        <Campo label="Distrito">
+          <select
+            className={claseInput}
+            value={distritoId}
+            onChange={(e) => setDistritoId(e.target.value)}
+            disabled={!provinciaId}
+          >
+            <option value="">Selecciona…</option>
+            {distritos.map((d) => (
+              <option key={d.id} value={d.id}>{d.nombre}</option>
+            ))}
+          </select>
         </Campo>
         <Campo label="Elección">
           <select className={claseInput} value={eleccionId} onChange={(e) => setEleccionId(e.target.value)}>

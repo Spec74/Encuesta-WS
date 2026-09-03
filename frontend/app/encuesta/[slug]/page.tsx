@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { api } from "@/lib/api";
 import { PanelVotacion } from "@/components/PanelVotacion";
+import { CompartirEncuesta } from "@/components/CompartirEncuesta";
 
 export async function generateMetadata({
   params,
@@ -46,6 +47,11 @@ export default async function PaginaEncuesta({ params }: { params: { slug: strin
           day: "2-digit", month: "long", year: "numeric",
         })}
       </p>
+
+      <CompartirEncuesta
+        url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://encuestas.willasayki.pe"}/encuesta/${encuesta.slug}`}
+        titulo={encuesta.titulo}
+      />
 
       {encuesta.distrito?.contexto && (
         <div className="mt-6 border-l-2 border-andes pl-4 text-sm text-pizarra/80 max-w-lectura">
