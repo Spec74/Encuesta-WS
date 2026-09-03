@@ -18,7 +18,7 @@ services:
       - key: ADMIN_TOKEN
         generateValue: true
       - key: CORS_ORIGINS
-        value: https://willasayki.pe,https://encuestas.willasayki.pe
+        value: https://encuesta-ws.vercel.app,https://willasayki.pe,https://encuestas.willasayki.pe
       - key: NODE_VERSION
         value: 18.20.0
 
