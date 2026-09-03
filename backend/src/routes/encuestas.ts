@@ -15,6 +15,7 @@ encuestasRouter.get("/", async (req, res) => {
     include: {
       distrito: { include: { provincia: { include: { departamento: true } } } },
       eleccion: true,
+      candidatos: { select: { votosCache: true } },
     },
   });
   res.json(data);
