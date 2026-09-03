@@ -24,6 +24,6 @@ services:
 
 databases:
   - name: willasayki-encuestas-db
-    plan: starter
+    plan: free
     region: oregon
     postgresMajorVersion: 15
