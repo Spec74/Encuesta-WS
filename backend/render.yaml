@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: willasayki-encuestas-api
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /salud
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: willasayki-encuestas-db
+          property: connectionString
+      - key: HASH_SALT
+        generateValue: true
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://willasayki.pe,https://encuestas.willasayki.pe
+      - key: NODE_VERSION
+        value: 18.20.0
+
+databases:
+  - name: willasayki-encuestas-db
+    plan: starter
+    region: oregon
+    postgresMajorVersion: 15

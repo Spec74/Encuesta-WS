@@ -1,0 +1,18 @@
+FROM node:18-alpine
+
+# Prisma necesita OpenSSL para su motor de esquema/consultas; Alpine no lo
+# trae instalado por defecto, lo que causaba el error
+# "Could not parse schema engine response".
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+# Se instalan dependencias primero para aprovechar la caché de capas de Docker
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 4000
+
+CMD ["npm", "run", "dev"]

@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #FBFAF7;
+  color: #12181F;
+}
+
+::selection {
+  background-color: #365C4A;
+  color: #FBFAF7;
+}
+
+a {
+  text-underline-offset: 3px;
+}

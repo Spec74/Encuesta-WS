@@ -1,0 +1,101 @@
+version: "3.9"
+
+services:
+  # ---------------- Base de datos ----------------
+  db:
+    image: postgres:15-alpine
+    container_name: willasayki-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: willasayki
+      POSTGRES_PASSWORD: willasayki
+      POSTGRES_DB: willasayki
+    ports:
+      - "5432:5432"
+    volumes:
+      - willasayki_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U willasayki -d willasayki"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Visor web de la base de datos (http://localhost:8080) — opcional, útil para
+  # inspeccionar tablas sin salir del navegador mientras desarrollas.
+  adminer:
+    image: adminer
+    container_name: willasayki-adminer
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+
+  # ---------------- API (Node + Express + Prisma) ----------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: willasayki-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://willasayki:willasayki@db:5432/willasayki
+      HASH_SALT: dev-salt-cambiar-en-produccion
+      ADMIN_TOKEN: dev-admin-token
+      CORS_ORIGINS: http://localhost:3000
+      PORT: 4000
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend:/app
+      - willasayki_backend_node_modules:/app/node_modules
+    # Sincroniza el esquema con la base de datos y arranca con hot-reload
+    command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
+
+  # ---------------- Sitio (Next.js) ----------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: willasayki-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - willasayki_frontend_node_modules:/app/node_modules
+      - willasayki_frontend_next_cache:/app/.next
+
+  # Prisma Studio opcional (http://localhost:5555). Se levanta solo bajo
+  # demanda: `docker compose --profile tools up studio`
+  studio:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: willasayki-studio
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://willasayki:willasayki@db:5432/willasayki
+    volumes:
+      - ./backend:/app
+      - willasayki_backend_node_modules:/app/node_modules
+    ports:
+      - "5555:5555"
+    command: sh -c "npx prisma generate && npx prisma studio --port 5555 --hostname 0.0.0.0"
+
+volumes:
+  willasayki_db_data:
+  willasayki_backend_node_modules:
+  willasayki_frontend_node_modules:
+  willasayki_frontend_next_cache:

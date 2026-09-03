@@ -1,0 +1,16 @@
+{
+  "name": "willasayki-encuestas",
+  "private": true,
+  "description": "Atajos para manejar el stack completo (DB + backend + frontend) con Docker.",
+  "scripts": {
+    "up": "docker compose up --build",
+    "up:d": "docker compose up --build -d",
+    "down": "docker compose down",
+    "down:volumes": "docker compose down -v",
+    "logs": "docker compose logs -f",
+    "seed": "docker compose exec backend npm run seed",
+    "studio": "docker compose --profile tools up studio",
+    "backend:shell": "docker compose exec backend sh",
+    "frontend:shell": "docker compose exec frontend sh"
+  }
+}

@@ -1,0 +1,202 @@
+// ============================================================
+// WS WILLASAYKI · Encuestas Ciudadanas
+// Esquema de base de datos (PostgreSQL vía Prisma)
+// Desplegar como "PostgreSQL" en Render + este servicio backend
+// ============================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  // "native" cubre tu máquina/host; "linux-musl-openssl-3.0.x" cubre los
+  // contenedores basados en Alpine (Docker) usados en este proyecto.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Geografía (Departamento → Provincia → Distrito) ----------
+
+model Departamento {
+  id          String       @id @default(cuid())
+  nombre      String       @unique
+  ubigeo      String       @unique // código INEI de 2 dígitos
+  provincias  Provincia[]
+  createdAt   DateTime     @default(now())
+}
+
+model Provincia {
+  id             String        @id @default(cuid())
+  nombre         String
+  ubigeo         String        @unique // código INEI de 4 dígitos
+  departamento   Departamento  @relation(fields: [departamentoId], references: [id])
+  departamentoId String
+  distritos      Distrito[]
+
+  @@unique([departamentoId, nombre])
+}
+
+model Distrito {
+  id            String     @id @default(cuid())
+  nombre        String
+  ubigeo        String     @unique // código INEI de 6 dígitos
+  provincia     Provincia  @relation(fields: [provinciaId], references: [id])
+  provinciaId   String
+  contexto      String?    @db.Text // contexto territorial/electoral (editorial)
+  poblacionElectoral Int?
+  encuestas     Encuesta[]
+
+  @@unique([provinciaId, nombre])
+}
+
+// ---------- Elecciones y cargos ----------
+
+enum TipoEleccion {
+  PRESIDENCIAL
+  REGIONAL
+  MUNICIPAL_PROVINCIAL
+  MUNICIPAL_DISTRITAL
+  CONGRESO
+  PARLAMENTO_ANDINO
+}
+
+model Eleccion {
+  id            String        @id @default(cuid())
+  nombre        String        // "Elecciones Generales 2026"
+  tipo          TipoEleccion
+  fechaOficial  DateTime?
+  activa        Boolean       @default(true)
+  encuestas     Encuesta[]
+}
+
+// ---------- Partidos y candidatos ----------
+
+model PartidoPolitico {
+  id          String       @id @default(cuid())
+  nombre      String       @unique
+  siglas      String?
+  logoUrl     String?
+  colorHex    String?
+  candidatos  Candidato[]
+}
+
+model Candidato {
+  id                String            @id @default(cuid())
+  nombres           String
+  apellidos         String
+  fotoUrl           String?
+  partido           PartidoPolitico   @relation(fields: [partidoId], references: [id])
+  partidoId         String
+  cargoPostulado     String           // "Alcalde distrital", "Presidente de la República", etc.
+  perfilBasico      String?           @db.Text
+  hojaVidaVerificada Boolean          @default(false)
+  fuenteHojaVida     String?          // URL JNE/DECLARA JUSTO
+  propuestas        PropuestaCandidato[]
+  fuentes           FuenteVerificada[]
+  participaciones   EncuestaCandidato[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model PropuestaCandidato {
+  id           String     @id @default(cuid())
+  candidato    Candidato  @relation(fields: [candidatoId], references: [id])
+  candidatoId  String
+  eje          String     // "Seguridad ciudadana", "Salud", "Educación"...
+  resumen      String     @db.Text
+  orden        Int        @default(0)
+}
+
+model FuenteVerificada {
+  id           String     @id @default(cuid())
+  candidato    Candidato  @relation(fields: [candidatoId], references: [id])
+  candidatoId  String
+  titulo       String     // "Hoja de Vida - JNE"
+  url          String
+  tipo         String     // "OFICIAL" | "PRENSA" | "OTRO"
+}
+
+// ---------- Encuestas ----------
+
+enum EstadoEncuesta {
+  BORRADOR
+  ABIERTA
+  CERRADA
+  ARCHIVADA
+}
+
+model Encuesta {
+  id             String            @id @default(cuid())
+  titulo         String
+  descripcion    String?           @db.Text
+  distrito       Distrito          @relation(fields: [distritoId], references: [id])
+  distritoId     String
+  eleccion       Eleccion          @relation(fields: [eleccionId], references: [id])
+  eleccionId     String
+  estado         EstadoEncuesta    @default(BORRADOR)
+  fechaApertura  DateTime          @default(now())
+  fechaCierre    DateTime
+  metodologiaNota String?          @db.Text // nota corta específica de esta encuesta
+  candidatos     EncuestaCandidato[]
+  votos          Voto[]
+  slug           String            @unique
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([estado])
+}
+
+model EncuestaCandidato {
+  id            String     @id @default(cuid())
+  encuesta      Encuesta   @relation(fields: [encuestaId], references: [id])
+  encuestaId    String
+  candidato     Candidato  @relation(fields: [candidatoId], references: [id])
+  candidatoId   String
+  votosCache    Int        @default(0) // contador denormalizado para lecturas rápidas
+  votos         Voto[]
+
+  @@unique([encuestaId, candidatoId])
+}
+
+// ---------- Votos y antifraude ----------
+
+model Voto {
+  id                 String              @id @default(cuid())
+  encuesta           Encuesta            @relation(fields: [encuestaId], references: [id])
+  encuestaId         String
+  encuestaCandidato  EncuestaCandidato   @relation(fields: [encuestaCandidatoId], references: [id])
+  encuestaCandidatoId String
+  ipHash             String              // IP truncada/hasheada (no se guarda IP en claro)
+  deviceFingerprint  String              // hash de huella de dispositivo (client-side)
+  userAgentHash      String
+  sospechoso         Boolean             @default(false)
+  motivoSospecha     String?
+  createdAt          DateTime            @default(now())
+
+  // Un mismo dispositivo/IP no puede votar dos veces en la misma encuesta
+  @@unique([encuestaId, ipHash, deviceFingerprint])
+  @@index([encuestaId])
+  @@index([sospechoso])
+}
+
+// Registro de intentos bloqueados, útil para el panel de transparencia agregado (sin datos personales)
+model IntentoBloqueado {
+  id           String    @id @default(cuid())
+  encuestaId   String
+  motivo       String    // "DUPLICADO" | "RATE_LIMIT" | "PATRON_AUTOMATIZADO" | "PROXY_SOSPECHOSO"
+  createdAt    DateTime  @default(now())
+
+  @@index([encuestaId])
+}
+
+// ---------- Vínculo con el sistema de noticias de WS Willasayki ----------
+
+model NoticiaRelacionada {
+  id           String    @id @default(cuid())
+  encuestaId   String?
+  distritoId   String?
+  titulo       String
+  url          String    // URL en el CMS de noticias de WS Willasayki
+  publicadaEn  DateTime
+}
