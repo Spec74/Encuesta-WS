@@ -122,6 +122,33 @@ export default async function PaginaEncuesta({ params }: { params: { slug: strin
                 </div>
               )}
 
+              {c.candidato.experiencias?.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs uppercase text-pizarra/50 mb-2">Experiencia y trayectoria</p>
+                  <ul className="space-y-2">
+                    {c.candidato.experiencias.map((ex: any) => (
+                      <li key={ex.id} className="text-sm text-pizarra/80">
+                        <strong className="text-tinta">{ex.cargo}</strong> — {ex.institucion} ({ex.periodo})
+                        {ex.descripcion && <>: {ex.descripcion}</>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {c.candidato.planGobiernoUrl && (
+                <p className="mt-4 text-sm">
+                  <a
+                    href={c.candidato.planGobiernoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-andes"
+                  >
+                    Ver plan de gobierno oficial (JNE) ↗
+                  </a>
+                </p>
+              )}
+
               {c.candidato.fuentes?.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-3 text-xs">
                   {c.candidato.fuentes.map((f: any) => (

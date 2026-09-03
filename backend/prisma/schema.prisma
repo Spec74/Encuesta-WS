@@ -92,7 +92,9 @@ model Candidato {
   perfilBasico      String?           @db.Text
   hojaVidaVerificada Boolean          @default(false)
   fuenteHojaVida     String?          // URL JNE/DECLARA JUSTO
+  planGobiernoUrl    String?          // URL oficial del plan de gobierno (JNE), no se aloja aquí
   propuestas        PropuestaCandidato[]
+  experiencias      ExperienciaCandidato[]
   fuentes           FuenteVerificada[]
   participaciones   EncuestaCandidato[]
   createdAt         DateTime          @default(now())
@@ -105,6 +107,17 @@ model PropuestaCandidato {
   candidatoId  String
   eje          String     // "Seguridad ciudadana", "Salud", "Educación"...
   resumen      String     @db.Text
+  orden        Int        @default(0)
+}
+
+model ExperienciaCandidato {
+  id           String     @id @default(cuid())
+  candidato    Candidato  @relation(fields: [candidatoId], references: [id])
+  candidatoId  String
+  cargo        String     // "Regidor", "Gerente de Desarrollo Social"...
+  institucion  String     // "Municipalidad de...", "ONG...", empresa, etc.
+  periodo      String     // texto libre: "2019-2022"
+  descripcion  String?    @db.Text
   orden        Int        @default(0)
 }
 

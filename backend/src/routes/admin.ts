@@ -84,6 +84,39 @@ adminRouter.post(
   })
 );
 
+adminRouter.get(
+  "/provincias",
+  asincrono(async (_req, res) => {
+    res.json(await prisma.provincia.findMany({ include: { departamento: true }, orderBy: { nombre: "asc" } }));
+  })
+);
+
+const distritoUpdateSchema = z.object({
+  nombre: z.string().min(2).optional(),
+  ubigeo: z.string().min(1).optional(),
+  contexto: z.string().optional(),
+  poblacionElectoral: z.number().int().optional(),
+});
+adminRouter.patch(
+  "/distritos/:id",
+  asincrono(async (req, res) => {
+    const datos = distritoUpdateSchema.parse(req.body);
+    const d = await prisma.distrito.update({ where: { id: req.params.id }, data: datos });
+    res.json(d);
+  })
+);
+adminRouter.get(
+  "/distritos",
+  asincrono(async (_req, res) => {
+    res.json(
+      await prisma.distrito.findMany({
+        include: { provincia: { include: { departamento: true } } },
+        orderBy: { nombre: "asc" },
+      })
+    );
+  })
+);
+
 // ---------- Elecciones ----------
 const eleccionSchema = z.object({
   nombre: z.string().min(3),
@@ -137,6 +170,21 @@ adminRouter.get(
   })
 );
 
+const partidoUpdateSchema = z.object({
+  nombre: z.string().min(2).optional(),
+  siglas: z.string().optional(),
+  colorHex: z.string().optional(),
+  logoUrl: z.string().optional(),
+});
+adminRouter.patch(
+  "/partidos/:id",
+  asincrono(async (req, res) => {
+    const datos = partidoUpdateSchema.parse(req.body);
+    const p = await prisma.partidoPolitico.update({ where: { id: req.params.id }, data: datos });
+    res.json(p);
+  })
+);
+
 // ---------- Candidatos ----------
 const candidatoSchema = z.object({
   nombres: z.string().min(2),
@@ -174,10 +222,93 @@ adminRouter.get(
   asincrono(async (_req, res) => {
     res.json(
       await prisma.candidato.findMany({
-        include: { partido: true },
+        include: { partido: true, propuestas: true, experiencias: true, fuentes: true },
         orderBy: { apellidos: "asc" },
       })
     );
+  })
+);
+
+const candidatoUpdateSchema = z.object({
+  nombres: z.string().min(2).optional(),
+  apellidos: z.string().min(2).optional(),
+  partidoId: z.string().min(1).optional(),
+  cargoPostulado: z.string().min(2).optional(),
+  perfilBasico: z.string().optional(),
+  fotoUrl: z.string().optional(),
+  hojaVidaVerificada: z.boolean().optional(),
+  fuenteHojaVida: z.string().optional(),
+  planGobiernoUrl: z.string().optional(),
+});
+adminRouter.patch(
+  "/candidatos/:id",
+  asincrono(async (req, res) => {
+    const datos = candidatoUpdateSchema.parse(req.body);
+    const c = await prisma.candidato.update({
+      where: { id: req.params.id },
+      data: datos,
+      include: { partido: true, propuestas: true, experiencias: true, fuentes: true },
+    });
+    res.json(c);
+  })
+);
+
+// Añadir una propuesta, experiencia o fuente a un candidato YA creado — para
+// completar su hoja de vida después del alta inicial, sin tocar el resto.
+const propuestaSchema = z.object({ eje: z.string().min(2), resumen: z.string().min(2), orden: z.number().optional() });
+adminRouter.post(
+  "/candidatos/:id/propuestas",
+  asincrono(async (req, res) => {
+    const datos = propuestaSchema.parse(req.body);
+    const p = await prisma.propuestaCandidato.create({ data: { ...datos, candidatoId: req.params.id } });
+    res.status(201).json(p);
+  })
+);
+adminRouter.delete(
+  "/propuestas/:id",
+  asincrono(async (req, res) => {
+    await prisma.propuestaCandidato.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  })
+);
+
+const experienciaSchema = z.object({
+  cargo: z.string().min(2),
+  institucion: z.string().min(2),
+  periodo: z.string().min(2),
+  descripcion: z.string().optional(),
+  orden: z.number().optional(),
+});
+adminRouter.post(
+  "/candidatos/:id/experiencias",
+  asincrono(async (req, res) => {
+    const datos = experienciaSchema.parse(req.body);
+    const e = await prisma.experienciaCandidato.create({ data: { ...datos, candidatoId: req.params.id } });
+    res.status(201).json(e);
+  })
+);
+adminRouter.delete(
+  "/experiencias/:id",
+  asincrono(async (req, res) => {
+    await prisma.experienciaCandidato.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  })
+);
+
+const fuenteSchema = z.object({ titulo: z.string().min(2), url: z.string().url(), tipo: z.string().min(1) });
+adminRouter.post(
+  "/candidatos/:id/fuentes",
+  asincrono(async (req, res) => {
+    const datos = fuenteSchema.parse(req.body);
+    const f = await prisma.fuenteVerificada.create({ data: { ...datos, candidatoId: req.params.id } });
+    res.status(201).json(f);
+  })
+);
+adminRouter.delete(
+  "/fuentes/:id",
+  asincrono(async (req, res) => {
+    await prisma.fuenteVerificada.delete({ where: { id: req.params.id } });
+    res.status(204).end();
   })
 );
 

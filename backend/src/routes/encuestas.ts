@@ -30,7 +30,7 @@ encuestasRouter.get("/:slug", async (req, res) => {
       eleccion: true,
       candidatos: {
         include: {
-          candidato: { include: { partido: true, propuestas: true, fuentes: true } },
+          candidato: { include: { partido: true, propuestas: true, experiencias: true, fuentes: true } },
         },
       },
     },

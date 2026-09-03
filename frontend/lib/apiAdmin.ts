@@ -27,6 +27,10 @@ export const apiAdmin = {
 
   crearDistrito: (token: string, datos: any) =>
     llamar("/distritos", token, { method: "POST", body: JSON.stringify(datos) }),
+  provincias: (token: string) => llamar<any[]>("/provincias", token),
+  distritos: (token: string) => llamar<any[]>("/distritos", token),
+  actualizarDistrito: (token: string, id: string, datos: any) =>
+    llamar(`/distritos/${id}`, token, { method: "PATCH", body: JSON.stringify(datos) }),
 
   elecciones: (token: string) => llamar<any[]>("/elecciones", token),
   crearEleccion: (token: string, datos: any) =>
@@ -35,10 +39,26 @@ export const apiAdmin = {
   partidos: (token: string) => llamar<any[]>("/partidos", token),
   crearPartido: (token: string, datos: any) =>
     llamar("/partidos", token, { method: "POST", body: JSON.stringify(datos) }),
+  actualizarPartido: (token: string, id: string, datos: any) =>
+    llamar(`/partidos/${id}`, token, { method: "PATCH", body: JSON.stringify(datos) }),
 
   candidatos: (token: string) => llamar<any[]>("/candidatos", token),
   crearCandidato: (token: string, datos: any) =>
     llamar("/candidatos", token, { method: "POST", body: JSON.stringify(datos) }),
+  actualizarCandidato: (token: string, id: string, datos: any) =>
+    llamar(`/candidatos/${id}`, token, { method: "PATCH", body: JSON.stringify(datos) }),
+  agregarPropuesta: (token: string, candidatoId: string, datos: any) =>
+    llamar(`/candidatos/${candidatoId}/propuestas`, token, { method: "POST", body: JSON.stringify(datos) }),
+  eliminarPropuesta: (token: string, id: string) =>
+    llamar(`/propuestas/${id}`, token, { method: "DELETE" }),
+  agregarExperiencia: (token: string, candidatoId: string, datos: any) =>
+    llamar(`/candidatos/${candidatoId}/experiencias`, token, { method: "POST", body: JSON.stringify(datos) }),
+  eliminarExperiencia: (token: string, id: string) =>
+    llamar(`/experiencias/${id}`, token, { method: "DELETE" }),
+  agregarFuente: (token: string, candidatoId: string, datos: any) =>
+    llamar(`/candidatos/${candidatoId}/fuentes`, token, { method: "POST", body: JSON.stringify(datos) }),
+  eliminarFuente: (token: string, id: string) =>
+    llamar(`/fuentes/${id}`, token, { method: "DELETE" }),
 
   encuestas: (token: string) => llamar<any[]>("/encuestas", token),
   crearEncuesta: (token: string, datos: any) =>
