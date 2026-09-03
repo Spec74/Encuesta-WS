@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiAdmin } from "@/lib/apiAdmin";
+import { SubidaImagen } from "@/components/admin/SubidaImagen";
 
 const PESTAÑAS = ["Geografía", "Partidos", "Candidatos", "Encuestas"] as const;
 type Pestaña = (typeof PESTAÑAS)[number];
@@ -268,16 +269,23 @@ function FormularioPartidos({ token }: { token: string }) {
   const [nombre, setNombre] = useState("");
   const [siglas, setSiglas] = useState("");
   const [colorHex, setColorHex] = useState("#365C4A");
+  const [logoUrl, setLogoUrl] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [tipoMsg, setTipoMsg] = useState<"ok" | "error">("ok");
 
   async function guardar() {
     try {
-      await apiAdmin.crearPartido(token, { nombre, siglas: siglas || undefined, colorHex });
+      await apiAdmin.crearPartido(token, {
+        nombre,
+        siglas: siglas || undefined,
+        colorHex,
+        logoUrl: logoUrl || undefined,
+      });
       setTipoMsg("ok");
       setMensaje("Partido guardado.");
       setNombre("");
       setSiglas("");
+      setLogoUrl("");
     } catch (e: any) {
       setTipoMsg("error");
       setMensaje(e.message);
@@ -286,6 +294,7 @@ function FormularioPartidos({ token }: { token: string }) {
 
   return (
     <div className="max-w-sm">
+      <SubidaImagen label="Logo del partido" valor={logoUrl} onCambio={setLogoUrl} forma="cuadrado" />
       <Campo label="Nombre del partido">
         <input className={claseInput} value={nombre} onChange={(e) => setNombre(e.target.value)} />
       </Campo>
@@ -312,6 +321,7 @@ function FormularioCandidatos({ token }: { token: string }) {
   const [partidoId, setPartidoId] = useState("");
   const [cargoPostulado, setCargoPostulado] = useState("");
   const [perfilBasico, setPerfilBasico] = useState("");
+  const [fotoUrl, setFotoUrl] = useState("");
   const [hojaVidaVerificada, setHojaVidaVerificada] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [tipoMsg, setTipoMsg] = useState<"ok" | "error">("ok");
@@ -328,12 +338,14 @@ function FormularioCandidatos({ token }: { token: string }) {
         partidoId,
         cargoPostulado,
         perfilBasico: perfilBasico || undefined,
+        fotoUrl: fotoUrl || undefined,
         hojaVidaVerificada,
       });
       setTipoMsg("ok");
       setMensaje("Candidato guardado. Copia su ID desde el backend para asignarlo a una encuesta.");
       setNombres("");
       setApellidos("");
+      setFotoUrl("");
     } catch (e: any) {
       setTipoMsg("error");
       setMensaje(e.message);
@@ -342,6 +354,7 @@ function FormularioCandidatos({ token }: { token: string }) {
 
   return (
     <div className="max-w-lg">
+      <SubidaImagen label="Foto del candidato" valor={fotoUrl} onCambio={setFotoUrl} forma="circulo" />
       <div className="grid sm:grid-cols-2 gap-x-4">
         <Campo label="Nombres">
           <input className={claseInput} value={nombres} onChange={(e) => setNombres(e.target.value)} />

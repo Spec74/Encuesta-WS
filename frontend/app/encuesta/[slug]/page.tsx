@@ -64,13 +64,29 @@ export default async function PaginaEncuesta({ params }: { params: { slug: strin
           {encuesta.candidatos.map((c: any) => (
             <article key={c.id} className="border border-linea p-5">
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-medium text-tinta">
-                    {c.candidato.nombres} {c.candidato.apellidos}
-                  </h3>
-                  <p className="text-sm text-pizarra/70">
-                    {c.candidato.partido?.nombre} · {c.candidato.cargoPostulado}
-                  </p>
+                <div className="flex items-start gap-3">
+                  {c.candidato.fotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={c.candidato.fotoUrl}
+                      alt={`${c.candidato.nombres} ${c.candidato.apellidos}`}
+                      className="w-16 h-16 rounded-full object-cover border border-linea shrink-0"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-linea/60 shrink-0" />
+                  )}
+                  <div>
+                    <h3 className="font-medium text-tinta">
+                      {c.candidato.nombres} {c.candidato.apellidos}
+                    </h3>
+                    <p className="text-sm text-pizarra/70 flex items-center gap-1.5">
+                      {c.candidato.partido?.logoUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.candidato.partido.logoUrl} alt="" className="w-4 h-4 object-contain" />
+                      )}
+                      {c.candidato.partido?.nombre} · {c.candidato.cargoPostulado}
+                    </p>
+                  </div>
                 </div>
                 <span
                   className={`text-xs px-2 py-0.5 border shrink-0 ${
